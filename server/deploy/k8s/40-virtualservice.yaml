@@ -1,0 +1,18 @@
+# Private route only: face images and embeddings are biometric data.
+# Bound to arunlabs-private-gateway (same pattern as forge-grafana, arunlabs-wiki).
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: insightface
+  namespace: insightface
+spec:
+  hosts:
+    - insightface.arunlabs.com
+  gateways:
+    - istio-system/arunlabs-private-gateway
+  http:
+    - route:
+        - destination:
+            host: insightface-server.insightface.svc.cluster.local
+            port:
+              number: 8080
