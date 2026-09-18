@@ -1,0 +1,46 @@
+# One-shot model installer. Mirrors the Compose `models` tool service:
+# downloads buffalo_l from the GitHub model-zoo release into the models PVC.
+# Re-run with `kubectl delete job` + `kubectl apply -f` to install another
+# package (buffalo_s, antelopev2, ...). CPU image: no GPU scheduling needed.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: insightface-models-install
+  namespace: insightface
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: insightface-models-install
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: models
+          image: ghcr.io/deepinsight/insightface-server:0.3.1-cpu
+          args: ["install", "buffalo_l", "--accept-license"]
+          command: ["python", "-m", "insightface_server.models_cli"]
+          env:
+            - name: INSIGHTFACE_MODELS_DIR
+              value: /models
+            - name: INSIGHTFACE_CONFIG_FILE
+              value: /etc/insightface/server.toml
+          volumeMounts:
+            - name: config
+              mountPath: /etc/insightface
+              readOnly: true
+            - name: models
+              mountPath: /models
+          securityContext:
+            allowPrivilegeEscalation: false
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 1Gi}
+      volumes:
+        - name: config
+          configMap:
+            name: insightface-config
+        - name: models
+          persistentVolumeClaim:
+            claimName: insightface-models

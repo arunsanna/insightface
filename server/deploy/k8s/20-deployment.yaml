@@ -1,0 +1,93 @@
+# Mirrors server/deploy/compose.cuda12.yml (service `server`).
+# STRICT_CUDA=1: fails startup without a schedulable GPU, no CPU fallback.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: insightface-server
+  namespace: insightface
+  labels:
+    app: insightface-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: insightface-server
+  template:
+    metadata:
+      labels:
+        app: insightface-server
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
+      containers:
+        - name: server
+          image: ghcr.io/deepinsight/insightface-server:0.3.1-cuda12
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: INSIGHTFACE_AUTH_ENABLED
+              value: "true"
+            - name: INSIGHTFACE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: insightface-api-key
+                  key: INSIGHTFACE_API_KEY
+            - name: INSIGHTFACE_CONFIG_FILE
+              value: /etc/insightface/server.toml
+            - name: INSIGHTFACE_LOG_LEVEL
+              value: INFO
+            - name: INSIGHTFACE_INFERENCE_MODE
+              value: onnx
+            - name: INSIGHTFACE_EXECUTION_PROVIDER
+              value: CUDAExecutionProvider
+            - name: INSIGHTFACE_STRICT_CUDA
+              value: "1"
+            - name: INSIGHTFACE_SEARCH_DEVICE_ID
+              value: "0"
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: compute,utility
+            - name: CUDA_MODULE_LOADING
+              value: LAZY
+          readinessProbe:
+            httpGet: {path: /v1/health, port: http}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 12
+          livenessProbe:
+            httpGet: {path: /v1/health, port: http}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 6
+          volumeMounts:
+            - name: config
+              mountPath: /etc/insightface
+              readOnly: true
+            - name: data
+              mountPath: /data
+            - name: models
+              mountPath: /models
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+          resources:
+            requests: {cpu: "2", memory: 8Gi, nvidia.com/gpu: 1}
+            limits: {cpu: "8", memory: 24Gi, nvidia.com/gpu: 1}
+      volumes:
+        - name: config
+          configMap:
+            name: insightface-config
+        - name: data
+          persistentVolumeClaim:
+            claimName: insightface-data
+        - name: models
+          persistentVolumeClaim:
+            claimName: insightface-models
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 128Mi
