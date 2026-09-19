@@ -6,10 +6,10 @@ Compose contract to Kubernetes for the ArunLabs Forge cluster
 
 Contract mirrored from `../compose.cuda12.yml`:
 
-- image `ghcr.io/deepinsight/insightface-server:0.3.1-cuda12`, port 8080
+- image `ghcr.io/deepinsight/insightface-server:0.3.1` (CPU tag deployed; see
+  the header of `20-deployment.yaml` for the one-line GPU switch), port 8080
 - writable mounts: `/models` (PVC, written by the install Job), `/data` (PVC,
   SQLite), `/etc/insightface` (ConfigMap), `/tmp` (memory emptyDir)
-- `INSIGHTFACE_STRICT_CUDA=1`: startup fails loudly without a GPU; no CPU fallback
 - models are installed by a one-shot Job (`models_cli install buffalo_l`),
   never at server startup; downloads come from the GitHub `model-zoo` release
 - auth: `INSIGHTFACE_AUTH_ENABLED=true` + `INSIGHTFACE_API_KEY` from a Secret

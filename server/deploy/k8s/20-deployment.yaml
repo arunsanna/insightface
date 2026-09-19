@@ -1,5 +1,9 @@
-# Mirrors server/deploy/compose.cuda12.yml (service `server`).
-# STRICT_CUDA=1: fails startup without a schedulable GPU, no CPU fallback.
+# Mirrors server/deploy/compose.cpu.yml (service `server`).
+# CPU runtime: Forge has ONE physical RTX 5090 whose VRAM is fully used by
+# llm-infra workloads, so the cuda12 image cannot allocate a context there
+# (cudaSetDevice OOM). GPU variant: swap image to :0.3.1-cuda12, set
+# INSIGHTFACE_EXECUTION_PROVIDER=CUDAExecutionProvider, INSIGHTFACE_STRICT_CUDA=1
+# and add nvidia.com/gpu: 1 requests/limits once VRAM is free.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -23,7 +27,7 @@ spec:
         runAsGroup: 0
       containers:
         - name: server
-          image: ghcr.io/deepinsight/insightface-server:0.3.1-cuda12
+          image: ghcr.io/deepinsight/insightface-server:0.3.1-cpu
           ports:
             - name: http
               containerPort: 8080
@@ -42,15 +46,9 @@ spec:
             - name: INSIGHTFACE_INFERENCE_MODE
               value: onnx
             - name: INSIGHTFACE_EXECUTION_PROVIDER
-              value: CUDAExecutionProvider
+              value: CPUExecutionProvider
             - name: INSIGHTFACE_STRICT_CUDA
-              value: "1"
-            - name: INSIGHTFACE_SEARCH_DEVICE_ID
               value: "0"
-            - name: NVIDIA_DRIVER_CAPABILITIES
-              value: compute,utility
-            - name: CUDA_MODULE_LOADING
-              value: LAZY
           readinessProbe:
             httpGet: {path: /v1/health, port: http}
             initialDelaySeconds: 15
@@ -75,8 +73,8 @@ spec:
             readOnlyRootFilesystem: true
             allowPrivilegeEscalation: false
           resources:
-            requests: {cpu: "2", memory: 8Gi, nvidia.com/gpu: 1}
-            limits: {cpu: "8", memory: 24Gi, nvidia.com/gpu: 1}
+            requests: {cpu: "2", memory: 4Gi}
+            limits: {cpu: "8", memory: 16Gi}
       volumes:
         - name: config
           configMap:
