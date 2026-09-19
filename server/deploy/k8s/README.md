@@ -12,7 +12,9 @@ Contract mirrored from `../compose.cuda12.yml`:
   SQLite), `/etc/insightface` (ConfigMap), `/tmp` (memory emptyDir)
 - models are installed by a one-shot Job (`models_cli install buffalo_l`),
   never at server startup; downloads come from the GitHub `model-zoo` release
-- auth: `INSIGHTFACE_AUTH_ENABLED=true` + `INSIGHTFACE_API_KEY` from a Secret
+- auth: disabled (`INSIGHTFACE_AUTH_ENABLED=false`) for the local-network-only
+  deployment; re-enable via the commented secretKeyRef in `20-deployment.yaml`
+  if the route ever becomes shared
 - route: `insightface.arunlabs.com` via `istio-system/arunlabs-private-gateway`
   (biometric data — keep off the public gateway)
 

@@ -13,6 +13,11 @@ metadata:
     app: insightface-server
 spec:
   replicas: 1
+  # The server holds an exclusive process lock on /data (single worker,
+  # phase one). RollingUpdate deadlocks: the surge pod can never become
+  # ready while the old pod still holds the lock.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: insightface-server
@@ -32,13 +37,16 @@ spec:
             - name: http
               containerPort: 8080
           env:
+            # Local-network-only deployment behind arunlabs-private-gateway:
+            # auth off. To re-enable, set "true" and restore the
+            # insightface-api-key secretKeyRef below.
+            # - name: INSIGHTFACE_API_KEY
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: insightface-api-key
+            #       key: INSIGHTFACE_API_KEY
             - name: INSIGHTFACE_AUTH_ENABLED
-              value: "true"
-            - name: INSIGHTFACE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: insightface-api-key
-                  key: INSIGHTFACE_API_KEY
+              value: "false"
             - name: INSIGHTFACE_CONFIG_FILE
               value: /etc/insightface/server.toml
             - name: INSIGHTFACE_LOG_LEVEL
