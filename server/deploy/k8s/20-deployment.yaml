@@ -37,16 +37,14 @@ spec:
             - name: http
               containerPort: 8080
           env:
-            # Local-network-only deployment behind arunlabs-private-gateway:
-            # auth off. To re-enable, set "true" and restore the
-            # insightface-api-key secretKeyRef below.
-            # - name: INSIGHTFACE_API_KEY
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: insightface-api-key
-            #       key: INSIGHTFACE_API_KEY
+            # API-key auth enabled (LAN deployment, shared-key mode).
             - name: INSIGHTFACE_AUTH_ENABLED
-              value: "false"
+              value: "true"
+            - name: INSIGHTFACE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: insightface-api-key
+                  key: INSIGHTFACE_API_KEY
             - name: INSIGHTFACE_CONFIG_FILE
               value: /etc/insightface/server.toml
             - name: INSIGHTFACE_LOG_LEVEL
